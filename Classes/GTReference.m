@@ -29,6 +29,10 @@
 #import "NSString+Git.h"
 
 
+@interface GTReference ()
++ (NSError *)invalidReferenceError;
+@end
+
 @implementation GTReference
 
 - (NSString *)description {
