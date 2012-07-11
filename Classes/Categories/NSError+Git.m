@@ -56,7 +56,11 @@ NSString * const GTGitErrorDomain = @"GTGitErrorDomain";
 		return [NSString stringWithUTF8String:strerror(errno)];
 	}
 	
-	return [NSString stringWithUTF8String:gitLastError->message];
+	if(gitLastError != NULL) {
+		return [NSString stringWithUTF8String:gitLastError->message];
+	} else {
+		return nil;
+	}
 }
 
 @end
