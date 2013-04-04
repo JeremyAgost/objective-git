@@ -65,14 +65,14 @@ typedef enum : git_checkout_strategy_t {
     GTCheckoutStrategyNone = GIT_CHECKOUT_NONE, /** default is a dry run, no actual updates */
     GTCheckoutStrategySafe = GIT_CHECKOUT_SAFE, /** Allow safe updates that cannot overwrite uncommitted data */
     GTCheckoutStrategySafeCreate = GIT_CHECKOUT_SAFE_CREATE, /** Allow safe updates plus creation of missing files */
-	GTCheckoutStrategyForce = GIT_CHECKOUT_FORCE, /** Allow all updates to force working directory to look like index */
-	GTCheckoutStrategyAllowConflicts = GIT_CHECKOUT_ALLOW_CONFLICTS, /** Allow checkout to make safe updates even if conflicts are found */
-	GTCheckoutStrategyRemoveUntracked = GIT_CHECKOUT_REMOVE_UNTRACKED, /** Remove untracked files not in index (that are not ignored) */
-	GTCheckoutStrategyRemoveIgnored = GIT_CHECKOUT_REMOVE_IGNORED, /** Remove ignored files not in index */
-	GTCheckoutStrategyUpdateOnly = GIT_CHECKOUT_UPDATE_ONLY, /** Only update existing files, don't create new ones */
-	GTCheckoutStrategyDontUpdateIndex = GIT_CHECKOUT_DONT_UPDATE_INDEX, /** Normally checkout updates index entries as it goes; this stops that */
-	GTCheckoutStrategyNoRefresh = GIT_CHECKOUT_NO_REFRESH, /** Don't refresh index/config/etc before doing checkout */
-	GTCheckoutStrategyDisablePathspecMatch = GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH /** Treat pathspec as simple list of exact match file paths */
+    GTCheckoutStrategyForce = GIT_CHECKOUT_FORCE, /** Allow all updates to force working directory to look like index */
+    GTCheckoutStrategyAllowConflicts = GIT_CHECKOUT_ALLOW_CONFLICTS, /** Allow checkout to make safe updates even if conflicts are found */
+    GTCheckoutStrategyRemoveUntracked = GIT_CHECKOUT_REMOVE_UNTRACKED, /** Remove untracked files not in index (that are not ignored) */
+    GTCheckoutStrategyRemoveIgnored = GIT_CHECKOUT_REMOVE_IGNORED, /** Remove ignored files not in index */
+    GTCheckoutStrategyUpdateOnly = GIT_CHECKOUT_UPDATE_ONLY, /** Only update existing files, don't create new ones */
+    GTCheckoutStrategyDontUpdateIndex = GIT_CHECKOUT_DONT_UPDATE_INDEX, /** Normally checkout updates index entries as it goes; this stops that */
+    GTCheckoutStrategyNoRefresh = GIT_CHECKOUT_NO_REFRESH, /** Don't refresh index/config/etc before doing checkout */
+    GTCheckoutStrategyDisablePathspecMatch = GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH /** Treat pathspec as simple list of exact match file paths */
 } GTCheckoutStrategy;
 
 typedef enum : git_checkout_notify_t {
@@ -227,12 +227,7 @@ typedef void (^GTRepositoryStatusBlock)(NSURL *fileURL, GTRepositoryFileStatus s
 // Returns `YES` if successful, `NO` if not.
 - (BOOL)resetToCommit:(GTCommit *)commit withResetType:(GTRepositoryResetType)resetType error:(NSError **)error;
 
-- (BOOL)checkout:(NSString *)newTarget
-              strategy:(GTCheckoutStrategy)strategy
-         progressBlock:(void (^)(NSString *path, NSUInteger completedSteps, NSUInteger totalSteps))progressBlock
-           notifyBlock:(int (^)(GTCheckoutNotify why, NSString* path, GTDiffFile* baseline, GTDiffFile* target, GTDiffFile* workdir))notifyBlock
-           notifyFlags:(GTCheckoutNotify)notifyFlags
-             withError:(NSError **)error;
+- (BOOL)checkout:(NSString *)newTarget strategy:(GTCheckoutStrategy)strategy progressBlock:(void (^)(NSString *path, NSUInteger completedSteps, NSUInteger totalSteps))progressBlock notifyBlock:(int (^)(GTCheckoutNotify why, NSString *path, GTDiffFile *baseline, GTDiffFile *target, GTDiffFile *workdir))notifyBlock notifyFlags:(GTCheckoutNotify)notifyFlags error:(NSError **)error;
 
 
 @end
