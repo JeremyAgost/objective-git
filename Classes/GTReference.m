@@ -28,6 +28,9 @@
 #import "NSError+Git.h"
 #import "NSString+Git.h"
 
+@interface GTReference ()
+@property (nonatomic, readwrite) git_reference *git_reference;
+@end
 
 @interface GTReference ()
 + (NSError *)invalidReferenceError;
@@ -41,7 +44,11 @@
 
 - (void)dealloc {
 	self.repository = nil;
-	if(self.git_reference != NULL) git_reference_free(self.git_reference);
+
+	if(self.git_reference != NULL) {
+		git_reference_free(self.git_reference);
+		self.git_reference = NULL;
+	}
 }
 
 
@@ -82,14 +89,14 @@
 		
 		self.repository = theRepo;
 		if (git_oid_fromstr(&oid, [theTarget UTF8String]) == GIT_OK) {
-			gitError = git_reference_create_oid(&git_reference, 
-												self.repository.git_repository, 
-												[refName UTF8String], 
-												&oid,
-												0);
+			gitError = git_reference_create(&git_reference,
+											self.repository.git_repository,
+											[refName UTF8String],
+											&oid,
+											0);
 		}
 		else {
-			gitError = git_reference_create_symbolic(&git_reference, 
+			gitError = git_reference_symbolic_create(&git_reference,
 													 self.repository.git_repository, 
 													 [refName UTF8String], 
 													 [theTarget UTF8String],
@@ -118,6 +125,16 @@
 	return self;
 }
 
+- (id)initWithGitReference:(git_reference *)ref repository:(GTRepository *)repo {
+	self = [super init];
+	if (self == nil) return nil;
+
+	self.git_reference = ref;
+	self.repository = repo;
+
+	return self;
+}
+
 - (NSString *)name {
 	if(![self isValid]) return nil;
 	
@@ -126,6 +143,7 @@
 	
 	return [NSString stringWithUTF8String:refName];
 }
+
 - (BOOL)setName:(NSString *)newName error:(NSError **)error {
 	if(![self isValid]) {
 		if(error != NULL) {
@@ -139,6 +157,10 @@
 	if(gitError < GIT_OK) {
 		if(error != NULL)
 			*error = [NSError git_errorFor:gitError withAdditionalDescription:@"Failed to rename reference."];
+
+		// Our reference might have been deleted (which implies being freed), so
+		// we should invalidate it.
+		self.git_reference = NULL;
 		return NO;
 	}
 	return YES;
@@ -154,9 +176,9 @@
 	if(![self isValid]) return nil;
 	
 	if(git_reference_type(self.git_reference) == GIT_REF_OID) {
-		return [NSString git_stringWithOid:git_reference_oid(self.git_reference)];
+		return [NSString git_stringWithOid:git_reference_target(self.git_reference)];
 	} else {
-		return [NSString stringWithUTF8String:git_reference_target(self.git_reference)];
+		return [NSString stringWithUTF8String:git_reference_symbolic_target(self.git_reference)];
 	}
 }
 
@@ -180,9 +202,9 @@
 			return NO;
 		}
 		
-		gitError = git_reference_set_oid(self.git_reference, &oid);
+		gitError = git_reference_set_target(self.git_reference, &oid);
 	} else {
-		gitError = git_reference_set_target(self.git_reference, [newTarget UTF8String]);
+		gitError = git_reference_symbolic_set_target(self.git_reference, [newTarget UTF8String]);
 	}
 
 	if(gitError < GIT_OK) {
@@ -203,12 +225,14 @@
 	}
 	
 	int gitError = git_reference_delete(self.git_reference);
+	self.git_reference = NULL; /* this has been free'd */
+
 	if(gitError < GIT_OK) {
 		if(error != NULL)
 			*error = [NSError git_errorFor:gitError withAdditionalDescription:@"Failed to delete reference."];
 		return NO;
 	}
-	self.git_reference = NULL; /* this has been free'd */
+
 	return YES;
 }
 
@@ -219,7 +243,7 @@
 - (const git_oid *)oid {
 	if(![self isValid]) return NULL;
 	
-	return git_reference_oid(self.git_reference);
+	return git_reference_target(self.git_reference);
 }
 
 - (BOOL)reloadWithError:(NSError **)error {
@@ -238,7 +262,6 @@
 		}
 		
 		self.git_reference = NULL;
-		
 		return NO;
 	}
 	

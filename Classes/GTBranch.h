@@ -41,7 +41,7 @@ typedef enum {
 @property (nonatomic, readonly) NSString *sha;
 @property (nonatomic, readonly) NSString *remoteName;
 @property (nonatomic, readonly) GTBranchType branchType;
-@property (nonatomic, readonly, unsafe_unretained) GTRepository *repository;
+@property (nonatomic, readonly, strong) GTRepository *repository;
 @property (nonatomic, readonly, strong) GTReference *reference;
 @property (nonatomic, copy) NSArray *remoteBranches;
 
@@ -78,6 +78,23 @@ typedef enum {
 
 - (NSArray *)uniqueCommitsRelativeToBranch:(GTBranch *)otherBranch error:(NSError **)error;
 
+// Deletes the local branch and nils out the reference.
 - (BOOL)deleteWithError:(NSError **)error;
+
+// If the receiver is a local branch, looks up and returns its tracking branch.
+// If the receiver is a remote branch, returns self. If no tracking branch was
+// found, returns nil and sets `success` to YES.
+- (GTBranch *)trackingBranchWithError:(NSError **)error success:(BOOL *)success;
+
+// Calculate the ahead/behind count from this branch to the given branch.
+//
+// ahead  - The number of commits which are unique to the receiver. Cannot be
+//          NULL.
+// behind - The number of commits which are unique to `branch`. Cannot be NULL.
+// branch - The branch to which the receiver should be compared.
+// error  - The error if one occurs.
+//
+// Returns whether the calculation was successful.
+- (BOOL)calculateAhead:(size_t *)ahead behind:(size_t *)behind relativeTo:(GTBranch *)branch error:(NSError **)error;
 
 @end

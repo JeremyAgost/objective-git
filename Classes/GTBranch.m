@@ -33,7 +33,7 @@
 
 @interface GTBranch ()
 @property (nonatomic, strong) GTReference *reference;
-@property (nonatomic, unsafe_unretained) GTRepository *repository;
+@property (nonatomic, strong) GTRepository *repository;
 @end
 
 @implementation GTBranch
@@ -42,18 +42,15 @@
   return [NSString stringWithFormat:@"<%@: %p> name: %@, shortName: %@, sha: %@, remoteName: %@, repository: %@", NSStringFromClass([self class]), self, self.name, self.shortName, self.sha, self.remoteName, self.repository];
 }
 
-- (BOOL)isEqual:(id)otherObject {
-	if(![otherObject isKindOfClass:[GTBranch class]]) {
-		return NO;
-	}
-	
-	GTBranch *otherBranch = otherObject;
-	
-	return [self.name isEqualToString:otherBranch.name];
+- (BOOL)isEqual:(GTBranch *)otherBranch {
+	if (otherBranch == self) return YES;
+	if (![otherBranch isKindOfClass:self.class]) return NO;
+
+	return [self.name isEqual:otherBranch.name] && [self.sha isEqual:otherBranch.sha];
 }
 
 - (NSUInteger)hash {
-	return [self.name hash];
+	return self.name.hash ^ self.sha.hash;
 }
 
 
@@ -134,7 +131,12 @@
 }
 
 - (GTCommit *)targetCommitAndReturnError:(NSError **)error {
-    return (GTCommit *)[self.repository lookupObjectBySha:self.sha error:error];
+	if (self.sha == nil) {
+		if (error != NULL) *error = GTReference.invalidReferenceError;
+		return nil;
+	}
+
+	return (GTCommit *)[self.repository lookupObjectBySha:self.sha objectType:GTObjectTypeCommit error:error];
 }
 
 - (NSUInteger)numberOfCommitsWithError:(NSError **)error {
@@ -218,12 +220,74 @@
 }
 
 - (BOOL)deleteWithError:(NSError **)error {
-	BOOL success = [self.reference deleteWithError:error];
-	if(success) {
-		self.reference = nil;
+	if (!self.reference.valid) {
+		if (error != NULL) *error = GTReference.invalidReferenceError;
+		return NO;
+	}
+
+	int gitError = git_branch_delete(self.reference.git_reference);
+	if(gitError != GIT_OK) {
+		if(error != NULL) *error = [NSError git_errorFor:gitError withAdditionalDescription:@"Failed to delete branch."];
+		return NO;
 	}
 	
-	return success;
+	self.reference = nil;
+	
+	return YES;
+}
+
+- (GTBranch *)trackingBranchWithError:(NSError **)error success:(BOOL *)success {
+	if (self.branchType == GTBranchTypeRemote) {
+		if (success != NULL) *success = YES;
+		return self;
+	}
+
+	if (!self.reference.valid) {
+		if (success != NULL) *success = NO;
+		if (error != NULL) *error = GTReference.invalidReferenceError;
+		return NO;
+	}
+
+	git_reference *trackingRef = NULL;
+	int gitError = git_branch_tracking(&trackingRef, self.reference.git_reference);
+
+	// GIT_ENOTFOUND means no tracking branch found.
+	if (gitError == GIT_ENOTFOUND) {
+		if (success != NULL) *success = YES;
+		return nil;
+	}
+
+	if (gitError != GIT_OK) {
+		if (success != NULL) *success = NO;
+		if (error != NULL) *error = [NSError git_errorFor:gitError withAdditionalDescription:[NSString stringWithFormat:@"Failed to create reference to tracking branch from %@", self]];
+		return nil;
+	}
+
+	if (trackingRef == NULL) {
+		if (success != NULL) *success = NO;
+		if (error != NULL) *error = [NSError git_errorFor:gitError withAdditionalDescription:[NSString stringWithFormat:@"Got a NULL remote ref for %@", self]];
+		return nil;
+	}
+
+	if (success != NULL) *success = YES;
+
+	return [[self class] branchWithReference:[[GTReference alloc] initWithGitReference:trackingRef repository:self.repository] repository:self.repository];
+}
+
+- (BOOL)calculateAhead:(size_t *)ahead behind:(size_t *)behind relativeTo:(GTBranch *)branch error:(NSError **)error {
+	if (branch == nil) {
+		*ahead = 0;
+		*behind = 0;
+		return YES;
+	}
+
+	int errorCode = git_graph_ahead_behind(ahead, behind, self.repository.git_repository, branch.reference.oid, self.reference.oid);
+	if (errorCode != GIT_OK && error != NULL) {
+		*error = [NSError git_errorFor:errorCode withAdditionalDescription:[NSString stringWithFormat:@"Calculating ahead/behind with %@ to %@", self, branch]];
+		return NO;
+	}
+
+	return YES;
 }
 
 @end
