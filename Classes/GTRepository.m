@@ -635,10 +635,10 @@ static int checkoutNotifyCallback(git_checkout_notify_t why, const char *path, c
     
     int gitError = git_checkout_head(self.git_repository, &checkoutOptions);
     if (gitError < GIT_OK) {
-		if (error != NULL) *error = [NSError git_errorFor:gitError withAdditionalDescription:[NSString stringWithFormat:@"Failed to checkout tree \"%@\"", newTarget];
-                                     }
-                                     
-                                     return gitError == GIT_OK;
-                                     }
+		if (error != NULL) *error = [NSError git_errorFor:gitError withAdditionalDescription:[NSString stringWithFormat:@"Failed to checkout tree \"%@\"", newTarget]];
+    }
+    
+    return gitError == GIT_OK;
+}
 
 @end
