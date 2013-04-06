@@ -86,6 +86,8 @@ typedef enum : git_checkout_notify_t {
 
 
 typedef void (^GTRepositoryStatusBlock)(NSURL *fileURL, GTRepositoryFileStatus status, BOOL *stop);
+typedef void (^GTRepositoryCheckoutProgressBlock)(NSString *path, NSUInteger completedSteps, NSUInteger totalSteps);
+typedef int (^GTRepositoryCheckoutNotifyBlock)(GTCheckoutNotify why, NSString *path, GTDiffFile *baseline, GTDiffFile *target, GTDiffFile *workdir);
 
 @interface GTRepository : NSObject <GTObject>
 
@@ -118,7 +120,7 @@ typedef void (^GTRepositoryStatusBlock)(NSURL *fileURL, GTRepositoryFileStatus s
 // checkoutProgressBlock - This block is called with checkout updates (if withCheckout is YES).
 //
 // returns nil (and fills the error parameter) if an error occurred, or a GTRepository object if successful.
-+ (id)cloneFromURL:(NSURL *)originURL toWorkingDirectory:(NSURL *)workdirURL barely:(BOOL)barely withCheckout:(BOOL)withCheckout error:(NSError **)error transferProgressBlock:(void (^)(const git_transfer_progress *))transferProgressBlock checkoutProgressBlock:(void (^)(NSString *path, NSUInteger completedSteps, NSUInteger totalSteps))checkoutProgressBlock;
++ (id)cloneFromURL:(NSURL *)originURL toWorkingDirectory:(NSURL *)workdirURL barely:(BOOL)barely withCheckout:(BOOL)withCheckout error:(NSError **)error transferProgressBlock:(void (^)(const git_transfer_progress *))transferProgressBlock checkoutProgressBlock:(GTRepositoryCheckoutProgressBlock)checkoutProgressBlock;
 
 // Helper for getting the sha1 has of a raw object
 //
@@ -227,7 +229,7 @@ typedef void (^GTRepositoryStatusBlock)(NSURL *fileURL, GTRepositoryFileStatus s
 // Returns `YES` if successful, `NO` if not.
 - (BOOL)resetToCommit:(GTCommit *)commit withResetType:(GTRepositoryResetType)resetType error:(NSError **)error;
 
-- (BOOL)checkout:(NSString *)newTarget strategy:(GTCheckoutStrategy)strategy progressBlock:(void (^)(NSString *path, NSUInteger completedSteps, NSUInteger totalSteps))progressBlock notifyBlock:(int (^)(GTCheckoutNotify why, NSString *path, GTDiffFile *baseline, GTDiffFile *target, GTDiffFile *workdir))notifyBlock notifyFlags:(GTCheckoutNotify)notifyFlags error:(NSError **)error;
+- (BOOL)checkout:(NSString *)newTarget strategy:(GTCheckoutStrategy)strategy progressBlock:(GTRepositoryCheckoutProgressBlock)progressBlock notifyBlock:(GTRepositoryCheckoutNotifyBlock)notifyBlock notifyFlags:(GTCheckoutNotify)notifyFlags error:(NSError **)error;
 
 
 @end

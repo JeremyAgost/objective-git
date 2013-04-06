@@ -282,7 +282,7 @@
 	void (^transferProgressBlock)(const git_transfer_progress *) = ^(const git_transfer_progress *progress) {
 		transferProgressCalled = YES;
 	};
-	void (^checkoutProgressBlock)(NSString *, NSUInteger, NSUInteger) = ^(NSString *path, NSUInteger completedSteps, NSUInteger totalSteps) {
+    GTRepositoryCheckoutProgressBlock checkoutProgressBlock = ^(NSString *path, NSUInteger completedSteps, NSUInteger totalSteps) {
 		checkoutProgressCalled = YES;
 	};
 	NSURL *originURL = [NSURL fileURLWithPath:TEST_REPO_PATH(self.class)]; //[NSURL URLWithString: @"https://github.com/libgit2/TestGitRepository"];
@@ -310,7 +310,7 @@
 	void (^transferProgressBlock)(const git_transfer_progress *) = ^(const git_transfer_progress *progress) {
 		transferProgressCalled = YES;
 	};
-	void (^checkoutProgressBlock)(NSString *, NSUInteger, NSUInteger) = ^(NSString *path, NSUInteger completedSteps, NSUInteger totalSteps) {
+	GTRepositoryCheckoutProgressBlock checkoutProgressBlock = ^(NSString *path, NSUInteger completedSteps, NSUInteger totalSteps) {
 		checkoutProgressCalled = YES;
 	};
 	NSURL *originURL = [NSURL fileURLWithPath:TEST_REPO_PATH(self.class)]; //[NSURL URLWithString: @"https://github.com/libgit2/TestGitRepository"];

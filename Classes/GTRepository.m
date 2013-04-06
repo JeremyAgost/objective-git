@@ -138,7 +138,7 @@
 
 static void checkoutProgressCallback(const char *path, size_t completedSteps, size_t totalSteps, void *payload) {
 	if (payload == NULL) return;
-	void (^block)(NSString *, NSUInteger, NSUInteger) = (__bridge id)payload;
+    GTRepositoryCheckoutProgressBlock block = (__bridge id)payload;
 	NSString *nsPath = (path != NULL ? [NSString stringWithUTF8String:path] : nil);
 	block(nsPath, completedSteps, totalSteps);
 }
@@ -149,7 +149,7 @@ static void transferProgressCallback(const git_transfer_progress *progress, void
 	block(progress);
 }
 
-+ (id)cloneFromURL:(NSURL *)originURL toWorkingDirectory:(NSURL *)workdirURL barely:(BOOL)barely withCheckout:(BOOL)withCheckout error:(NSError **)error transferProgressBlock:(void (^)(const git_transfer_progress *))transferProgressBlock checkoutProgressBlock:(void (^)(NSString *path, NSUInteger completedSteps, NSUInteger totalSteps))checkoutProgressBlock {
++ (id)cloneFromURL:(NSURL *)originURL toWorkingDirectory:(NSURL *)workdirURL barely:(BOOL)barely withCheckout:(BOOL)withCheckout error:(NSError **)error transferProgressBlock:(void (^)(const git_transfer_progress *))transferProgressBlock checkoutProgressBlock:(GTRepositoryCheckoutProgressBlock)checkoutProgressBlock {
 	
 	git_clone_options cloneOptions = GIT_CLONE_OPTIONS_INIT;
 	if (barely) {
@@ -599,16 +599,17 @@ static int file_status_callback(const char *relativeFilePath, unsigned int gitSt
 
 static int checkoutNotifyCallback(git_checkout_notify_t why, const char *path, const git_diff_file *baseline, const git_diff_file *target, const git_diff_file *workdir, void *payload) {
 	if (payload == NULL) return 0;
-	int (^block)(GTCheckoutNotify why, NSString* path, GTDiffFile* baseline, GTDiffFile* target, GTDiffFile* workdir) = (__bridge id)payload;
+    GTRepositoryCheckoutNotifyBlock block = (__bridge id)payload;
+    
 	NSString *nsPath = (path != NULL ? @(path) : nil);
     GTDiffFile *gtBaseline = baseline ? [[GTDiffFile alloc] initWithGitDiffFile:*baseline] : nil;
     GTDiffFile *gtTarget = target ? [[GTDiffFile alloc] initWithGitDiffFile:*target] : nil;
     GTDiffFile *gtWorkdir = workdir ? [[GTDiffFile alloc] initWithGitDiffFile:*workdir] : nil;
-	return block((GTCheckoutNotify)why, nsPath, gtBaseline, gtTarget, gtWorkdir);
     
+	return block((GTCheckoutNotify)why, nsPath, gtBaseline, gtTarget, gtWorkdir);
 }
 
-- (BOOL)checkout:(NSString *)newTarget strategy:(GTCheckoutStrategy)strategy progressBlock:(void (^)(NSString *path, NSUInteger completedSteps, NSUInteger totalSteps))progressBlock notifyBlock:(int (^)(GTCheckoutNotify why, NSString *path, GTDiffFile *baseline, GTDiffFile *target, GTDiffFile *workdir))notifyBlock notifyFlags:(GTCheckoutNotify)notifyFlags error:(NSError **)error {
+- (BOOL)checkout:(NSString *)newTarget strategy:(GTCheckoutStrategy)strategy progressBlock:(GTRepositoryCheckoutProgressBlock)progressBlock notifyBlock:(GTRepositoryCheckoutNotifyBlock)notifyBlock notifyFlags:(GTCheckoutNotify)notifyFlags error:(NSError **)error {
     GTReference * head = [GTReference referenceByLookingUpReferencedNamed:@"HEAD" inRepository:self error:error];
     if (head == nil) {
         head = [GTReference referenceByCreatingReferenceNamed:@"HEAD" fromReferenceTarget:newTarget inRepository:self error:error];
